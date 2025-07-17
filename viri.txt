@@ -1,0 +1,7 @@
+https://sourceforge.net/projects/mpjexpress/files/ Dostopno 15. 7. 2025 18:32
+
+https://mpitutorial.com/tutorials/mpi-scatter-gather-and-allgather/ Dostopno 16. 7. 2025 12:28
+
+https://mpitutorial.com/tutorials/mpi-broadcast-and-collective-communication/ Dostopno 16. 7. 2025 15:50
+
+https://chatgpt.com/ Dostopno 16. 7. 2025 16:00
