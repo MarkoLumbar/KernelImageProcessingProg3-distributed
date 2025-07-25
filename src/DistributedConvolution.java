@@ -24,7 +24,7 @@ public class DistributedConvolution {
 
 
         if (rank == 0){
-            if (args.length < 3) { //premalo argumentov
+            if (args.length < 6) { //premalo argumentov
                 System.err.println("Usage: mpjrun.sh -np <st_proc> <input_path> <output_path> <kernel_name>");
                 MPI.Finalize(); //procesi naj se končajo
                 return;
@@ -141,7 +141,48 @@ public class DistributedConvolution {
         System.out.println("Proces " + rank + " dobi " + localRGB.length + " pixlov.");
 
 
-        MPI.Finalize(); //končaj MPI
+        //pretvorimo 1D tabelo v v local Bufferedimage
+        BufferedImage localImage = new BufferedImage(imageWidth, localHeight, BufferedImage.TYPE_INT_RGB);
+        localImage.setRGB(0, 0, imageWidth, localHeight, localRGB, 0, imageWidth);
+
+        //konvolucija
+        BufferedImage localConvolution = ImgProcessor.convolution(localImage, receivedKernel);
+
+        //spet nazaj v 1D zaradi Gatherv
+        int[] processedLocalRGB = new int[localRGB.length];
+        localConvolution.getRGB(0, 0, imageWidth, localHeight, processedLocalRGB, 0, imageWidth);
+
+
+        int[] finalRGB = null;
+        if (rank == 0) {
+            finalRGB = new int[imageWidth * imageHeight]; //buffer za koncno sliko
+        }
+
+        //zdruzimo vse pasove v finalRGB
+        MPI.COMM_WORLD.Gatherv(
+                processedLocalRGB,        // lokalni vir - proces to pošlje
+                0,
+                processedLocalRGB.length,
+                MPI.INT,
+                finalRGB,              // končni rezultat rank 0
+                0,                      // zacetek v finalRGB bufferju
+                chunkSizes,             // st elm za vsak proces
+                startPos,
+                MPI.INT,
+                0                   //root prejme vse
+        );
+
+        if (rank == 0) {
+            BufferedImage outputImage = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
+            outputImage.setRGB(0, 0, imageWidth, imageHeight, finalRGB, 0, imageWidth);
+            try {
+                ImageIO.write(outputImage, "png", new File(output_path));
+                System.out.println("Slika uspešno shranjena na: " + output_path);
+            } catch (IOException e) {
+                System.err.println("Napaka pri shranjevanju slike: " + e.getMessage());
+            }
+        }
+            MPI.Finalize(); //končaj MPI
     }
 
 }
