@@ -22,8 +22,12 @@ public class DistributedConvolution {
         int imageHeight = 0;
         int[] imageRGB = null;
 
+        long start = 0;
+
+        MPI.COMM_WORLD.Barrier(); //sinhronizacija procesov, istocasni zacetek
 
         if (rank == 0){
+            start = System.nanoTime();
             if (args.length < 6) { //premalo argumentov
                 System.err.println("Usage: mpjrun.sh -np <st_proc> <input_path> <output_path> <kernel_name>");
                 MPI.Finalize(); //procesi naj se končajo
@@ -172,11 +176,17 @@ public class DistributedConvolution {
                 0                   //root prejme vse
         );
 
+        MPI.COMM_WORLD.Barrier(); //sinhronizacija pred koncem
+
         if (rank == 0) {
+            long end = System.nanoTime();
             BufferedImage outputImage = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
             outputImage.setRGB(0, 0, imageWidth, imageHeight, finalRGB, 0, imageWidth);
             try {
-                ImageIO.write(outputImage, "png", new File(output_path));
+                System.out.println("Execution time (ms): " + (end - start) / 1_000_000); //da merimo samo konvolucijo
+                File outputFile = new File(output_path);
+                String formatName = output_path.substring(output_path.lastIndexOf('.') + 1); //najde piko in bere vse za njo - torej format
+                ImageIO.write(outputImage, formatName, outputFile);
                 System.out.println("Slika uspešno shranjena na: " + output_path);
             } catch (IOException e) {
                 System.err.println("Napaka pri shranjevanju slike: " + e.getMessage());
